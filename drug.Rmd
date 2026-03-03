@@ -1,0 +1,164 @@
+---
+title: "Domaci1"
+author: "Milica Jocic"
+date: "2025-04-26"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Instaliranje paketa
+
+install.packages("tidyverse")
+install.packages("readr")
+install.packages("ggpubr")
+install.packages("ggplot2")
+```
+
+```{r}
+# Ucitavanje paketa
+
+library(tidyverse)
+library(readr)
+library(ggpubr)
+library(ggplot2)
+```
+
+
+```{r}
+# Ucitavanje podataka
+podaci <- tibble(
+  godina = c(1952, 1947, 1953, 1938, 1949, 1947, 1954, 1939, 1952, 1948, 1954, 1952, 1953, 1962, 1966, 1952, 1949, 1964, 1964, 1964),
+  pol = c('ž', 'ž', 'ž', 'ž', 'ž', 'ž', 'm', 'ž', 'm', 'ž', 'ž', 'm', 'ž', 'm', 'ž', 'ž', 'm', 'm', 'ž', 'm'),
+  I_Pregled = c(21, 21, 20, 6, 21, 18, 21, 19, 21, 21, 22, 21, 21, 21, 21, 20, 14, 16, 15, 23),
+  Kontrola_60_dana = c(22, 23, 21, 7, 22, 19, 22, 19, 22, 21, 23, 22, 22, 22, 25, 21, 16, 16, 16, 24),
+  Kontrola_90_dana = c(24, 25, 23, 8, 24, 21, 24, 20, 23, 23, 25, 24, 25, 25, 27, 23, 19, 19, 19, 25)
+)
+
+```
+
+```{r}
+# Testiranje normalnosti(Shapiro-Wilk test) za poredjenje skora kroz vreme
+
+shapiro.test(podaci$I_Pregled) # za prvi pregled
+shapiro.test(podaci$Kontrola_60_dana) # za 60 dana
+shapiro.test(podaci$Kontrola_90_dana) # za 90 dana
+
+```
+
+```{r}
+# Podaci nisu normalno distribuirani, tako da koristim Wilcoxonov test 
+
+# Poredjenje I Pregleda i Kontrole na 60 dana:
+wilcox.test(podaci$I_Pregled, podaci$Kontrola_60_dana, paired = TRUE)
+# Poredjenje I Pregleda i Kontrole na 90 dana:
+wilcox.test(podaci$I_Pregled, podaci$Kontrola_90_dana, paired = TRUE)
+# Poredjenje Kontrole na 60 i 90 dana:
+wilcox.test(podaci$Kontrola_60_dana, podaci$Kontrola_90_dana, paired = TRUE)
+```
+-----
+Zelim da vidim kako se skor menja kroz vreme. Prvo moram da ispitam da li su podaci normalno distribuirani ili ne. Za to koristim Shapiro-Wilk test. 
+
+Shapiro-Wilk test je pokazao da podaci za inicijalno merenje, kao i za kontrole nakon 60 i 90 dana, nisu normalno distribuirani (jer je za sve p < 0.05).
+
+Zbog toga je za analizu promena skora kroz vreme koriscen Wilcoxonov test, za zavisne podatke.
+
+Rezultati Wilcoxon testa pokazali su da postoji statisticki znacajna razlika izmedju skora na inicijalnom merenju i nakon 60 dana (p < 0.05), kao i izmedju inicijalnog merenja i 90 dana (p < 0.05).
+
+Na osnovu ovih rezultata mozemo zakljuciti da uzimanje leka dovodi do znacajnog povecanja skora tokom vremena.
+-----
+
+```{r}
+# Opet koristim Shapiro-Wilk test da ispitam normalnost podataka za poredjenje po polu
+
+# Za zene - I Pregled
+shapiro.test(podaci$I_Pregled[podaci$pol == "ž"])
+
+# Za muskarce - I Pregled
+shapiro.test(podaci$I_Pregled[podaci$pol == "m"])
+
+# Za zene - Kontrola 60 dana
+shapiro.test(podaci$Kontrola_60_dana[podaci$pol == "ž"])
+
+# Za muskarce - Kontrola 60 dana
+shapiro.test(podaci$Kontrola_60_dana[podaci$pol == "m"])
+
+# Za zene - Kontrola 90 dana
+shapiro.test(podaci$Kontrola_90_dana[podaci$pol == "ž"])
+
+# Za muskarce - Kontrola 90 dana
+shapiro.test(podaci$Kontrola_90_dana[podaci$pol == "m"])
+```
+```{r}
+# Podaci nisu normalno rasporedjeni-> Wilcoxonov test, ali ovog puta sa nezavisnim podacima
+wilcox.test(I_Pregled ~ pol, data = podaci) # za prvi pregled
+wilcox.test(Kontrola_60_dana ~ pol, data = podaci) # za 60 dana
+wilcox.test(Kontrola_90_dana ~ pol, data = podaci) # za 90 dana 
+```
+-----
+Ovde zelim da vidim da li postoji razlika u skoru izmedju muskaraca i zena. 
+Opet sam korisila Shapiro-Wilk test da ispitam normalnost i on je pokazao da je p-vrednost na svim vremenskim tackama i za zene i za muskarce manja od 0.05, sto znaci da podaci nisu normalno distribuirani. 
+
+Zbog toga je za poredjenje skorova izmedju polova koriscen Wilcoxonov test, ali ovog puta za nezavisne podatke.
+
+Za svaki od tri vremenska intervala p-vrednost je veca od 0.05 tako da nije pronadjena statisticki znacajna razlika u efektu leka izmedju muskaraca i zena. 
+
+```{r}
+# Box plot koji prikazuje promenu skora kroz vreme
+
+# Preuredjivanje podataka u "long" format
+podaci_long <- podaci %>%
+  pivot_longer(cols = c(I_Pregled, Kontrola_60_dana, Kontrola_90_dana),
+               names_to = "Vreme",
+               values_to = "Skor")
+
+# Boxplot za vreme
+ggplot(podaci_long, aes(x = Vreme, y = Skor)) +
+  geom_boxplot(fill = "ivory", color = "maroon") +
+  geom_jitter(width = 0.2, color = "black", alpha = 0.5) + 
+  labs(title = "Promena skora kroz vreme",
+       x = "Vreme",
+       y = "Skor") +
+  theme_minimal()
+
+```
+Skor se povecava kroz vreme. Ima par outliera. Raspon se smanjuje vremenom.
+
+
+```{r}
+# Box plot za poredjenje skora po polu
+ggplot(podaci_long, aes(x = pol, y = Skor, fill = pol)) +
+  geom_boxplot() +
+  facet_wrap(~Vreme) + 
+  labs(title = "Poredjenje skora po polu kroz vreme",
+       x = "Pol",
+       y = "Skor") +
+  scale_fill_manual(values = c("m" = "beige", "ž" = "lavender")) +
+  theme_minimal()
+```
+Opet se vidi poboljsanje skora kroz vreme. Muskarci na kraju imaju vecu medijanu. 
+
+
+
+```{r}
+# Linijski grafikon za prosecan skor kroz vreme
+
+# Racunanje prosecnog skora za svaku vremensku tacku
+prosecni_skor <- podaci_long %>%
+  group_by(Vreme) %>%
+  summarise(Prosek = mean(Skor))
+
+# Linijski grafikon
+ggplot(prosecni_skor, aes(x = Vreme, y = Prosek, group = 1)) +
+  geom_line(color = "darkblue", size = 1.5) +
+  geom_point(color = "darkblue", size = 4) +
+  labs(title = "Prosecan skor kroz vreme",
+       x = "Vreme",
+       y = "Prosecan skor") +
+  theme_minimal()
+
+```
+I ovde se vidi povecanje srednjeg skora kroz vreme- stanje se poboljsava kod vecine ispitanika. 

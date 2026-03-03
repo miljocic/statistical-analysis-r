@@ -1,0 +1,148 @@
+---
+title: "Domaci2"
+author: "Milica Jocic"
+date: "2025-05-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readr)
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+```
+
+```{r}
+sreca <- read_csv("2019.csv")
+```
+
+
+```{r}
+View(sreca) 
+```
+
+```{r}
+head(sreca)
+```
+
+```{r}
+top10 <- sreca %>%
+  arrange(desc(`Score`)) %>%
+  slice(1:10)
+
+ggplot(top10, aes(y = reorder(`Country or region`, Score), x = Score)) +
+  geom_bar(stat = "identity", fill = "#20b2aa") +
+  coord_flip() +
+  labs(title = "Top 10 najsrecnijih zemalja", y = "Zemlja", x = "Indeks srece")
+
+```
+Vecina zemalja sa najvecim indeksom srece se nalazi u Severnoj i Centralnoj Evropi.
+
+```{r}
+ggplot(sreca, aes(x = `GDP per capita`, y = Score)) +
+  geom_point(color = "#ff8d1e") +
+  geom_smooth(method = "lm", se = FALSE, color = "#1e90ff") +
+  labs(title = "Indeks srece naspram BDP-a", x = "BDP po glavi", y = "Indeks srece")
+
+```
+Primecujem da su BDP i indeks srece u korelaciji, tj. zemlje sa vecim BDP-om su i srecnije. 
+
+```{r}
+sreca <- sreca %>%
+  mutate(Region = case_when(
+    # Northern Europe
+    `Country or region` %in% c("Finland", "Denmark", "Norway", "Iceland", "Sweden") ~ "Northern Europe",
+    
+    # Western Europe
+    `Country or region` %in% c("Germany", "France", "Netherlands", "Belgium", "United Kingdom", "Ireland", "Austria", "Switzerland", "Luxembourg") ~ "Western Europe",
+    
+    # Southern Europe
+    `Country or region` %in% c("Italy", "Spain", "Portugal", "Cyprus", "Malta") ~ "Southern Europe",
+    
+    # Eastern Europe
+    `Country or region` %in% c("Russia", "Ukraine", "Belarus", "Moldova", "Latvia", "Lithuania", "Estonia", "Hungary", "Poland", "Czech Republic", "Slovakia") ~ "Eastern Europe",
+    
+    # Balkans
+    `Country or region` %in% c("Serbia", "Croatia", "Bosnia and Herzegovina", "Montenegro", "North Macedonia", "Albania", "Slovenia", "Bulgaria", "Romania", "Greece") ~ "Balkans",
+    
+    # North America
+    `Country or region` %in% c("United States", "Canada") ~ "North America",
+    
+    # Central America & Caribbean
+    `Country or region` %in% c("Mexico", "Costa Rica", "Panama", "Dominican Republic", "El Salvador", "Guatemala", "Honduras", "Jamaica", "Trinidad and Tobago") ~ "Central America & Caribbean",
+    
+    # South America
+    `Country or region` %in% c("Brazil", "Argentina", "Chile", "Uruguay", "Paraguay", "Peru", "Colombia", "Ecuador", "Bolivia", "Venezuela") ~ "South America",
+    
+    # South Africa
+    `Country or region` %in% c("South Africa", "Nigeria", "Kenya", "Ghana", "Cameroon", "Senegal", "Ivory Coast", "Namibia", "Zambia", "Tanzania", "Zimbabwe", "Ethiopia", "Mauritius", "Mozambique", "Malawi", "Uganda") ~ "South Africa",
+    
+    # Middle East & North Africa
+    `Country or region` %in% c("Turkey", "Iran", "Iraq", "Israel", "Jordan", "Lebanon", "Egypt", "Morocco", "Algeria", "Tunisia", "Yemen") ~ "MENA",
+    
+    # South Asia
+    `Country or region` %in% c("India", "Pakistan", "Bangladesh", "Nepal", "Sri Lanka", "Afghanistan") ~ "South Asia",
+    
+    # Southeast Asia
+    `Country or region` %in% c("Thailand", "Vietnam", "Indonesia", "Malaysia", "Philippines", "Myanmar", "Cambodia", "Laos") ~ "Southeast Asia",
+    
+    # East Asia
+    `Country or region` %in% c("China", "Japan", "South Korea", "Taiwan", "Hong Kong", "Mongolia") ~ "East Asia",
+    
+    # Oceania
+    `Country or region` %in% c("Australia", "New Zealand") ~ "Oceania",
+    
+    # ako ništa drugo ne prepozna
+    TRUE ~ "Other"
+  ))
+
+
+```
+
+```{r}
+ggplot(sreca, aes(x = Region, y = Score)) +
+  geom_boxplot(fill = "#2acaea") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Raspodela srece po regionima", x = "Region", y = "Indeks srece")
+
+```
+Najveci stepen srece ima Severna Evropa, pracena Okeanijom, Severnom Amerikom i Zapadnom Evropom. Najnizi indeks srece imaju zemlje Juzne Azije i Juzne Afrike. Balkanske zemlje se nalaze u sredini, sa pojedinim outlierima. 
+
+```{r}
+# 10 zemalja sa najnizim indeksom srece
+bottom10 <- sreca %>%
+  arrange(Score) %>%
+  slice(1:10)
+
+print(bottom10[, c("Country or region", "Score")])
+
+```
+
+Izdvojila sam 10 zemalja sa najnizim indeksom srece, kako bih uradila poredjenje jedne od njih sa nekom od zemalja sa visokim Score-om. 
+
+Biram da poredim Fisnku i Siriju.
+```{r}
+comparison <- sreca %>%
+  filter(`Country or region` %in% c("Finland", "Syria")) %>%
+  select(`Country or region`, `GDP per capita`, `Healthy life expectancy`,
+         'Social support','Freedom to make life choices', 'Perceptions of corruption', 'Generosity', 'Score') %>%
+  pivot_longer(-`Country or region`, names_to = "Indicator", values_to = "Value")
+
+ggplot(comparison, aes(x = Indicator, y = Value, fill = `Country or region`)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_fill_manual(values = c("Finland" = "#9467bd", "Syria" = "#2ca02c"))+
+  labs(title = "Poredjenje Finske i Sirije", x = "Pokazatelj", y = "Vrednost") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+Finska ima vece rezultate po svim pokazateljima, osim velikodusnosti. BDP je duplo veci, sloboda takodje, kao i socijalna podrska, ocekivani zivotni vek, itd. Sirija ima veoma nizak stepen slobode, nedovoljnu socijalnu podrsku i slabo poverenje u institucije. Finska ima duplo veci indeks srece od Sirije. 
+
+
+
+Mislim da su sa indeksom srece najvise  povezani BPD po glavi stanovnika, Socijalna podrska i Ocekivani zivotni vek.
+Po mom misljenju, poslednja vizualizacija najbolje pokazuje koji faktori imaju najveci uticaj, jer se jasno vide svi pokazatelji, njihov stepen i razlika izmedju njih. 
